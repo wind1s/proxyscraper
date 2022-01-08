@@ -9,23 +9,6 @@ from aiohttp import ClientSession
 from request import Request
 
 
-def run_async_requests(
-    requests_data: Iterator[Request],
-    async_request: Callable[Any, ClientSession] = async_request,
-    base_url: Optional[str] = None,
-    limit: Optional[int] = 1000,
-) -> None:
-    """Creates coroutines for all requests and runs them async."""
-    loop = get_event_loop()
-    session = ClientSession(base_url=base_url)
-
-    coros = (async_request(data, session) for data in requests_data)
-    loop.run_until_complete(limit_coros(coros, limit))
-
-    loop.run_until_complete(session.close())
-    loop.close()
-
-
 async def async_request(request_data: Request, session: ClientSession) -> Any:
     """
     The standard request which can be customized.
@@ -64,3 +47,21 @@ async def limit_coros(request_coros: Iterator[Any], limit: int) -> Iterator[Any]
                     push_future(ensure_future(newf))
 
                 await f
+
+
+def run_async_requests(
+    requests_data: Iterator[Request],
+    async_request: Callable[Any, ClientSession] = async_request,
+    base_url: Optional[str] = None,
+    limit: Optional[int] = 1000,
+) -> None:
+    """Creates coroutines for all requests and runs them async."""
+
+    async def launch():
+        async with ClientSession(base_url=base_url) as session:
+            coros = (async_request(data, session) for data in requests_data)
+            return await limit_coros(coros, limit)
+
+    loop = get_event_loop()
+    loop.run_until_complete(launch())
+    loop.close()
