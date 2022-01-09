@@ -21,7 +21,7 @@ Json layout:
         'readme': 'https://ipinfo.io/missingauth'
     }
 """
-from typing import Dict, Callable
+from typing import Dict
 from datetime import timedelta
 from itertools import islice
 from json import loads
@@ -59,17 +59,17 @@ async def get_ip_info(session: ClientSession, ip_address: str) -> Dict[str, str]
     return extract_keys(response, IP_INFO_RESPONSE_KEYS)
 
 
-def process_ip_info_wrapper(database: Database):
+def process_ip_info_wrapper(ip_db: Database):
     async def process_ip_info(session: ClientSession, ip_address: str) -> None:
         """ """
 
-        if database.key_expired(ip_address, IP_DB_EXPIRE_TIME):
+        if ip_db.key_expired(ip_address, IP_DB_EXPIRE_TIME):
             ip_info: Dict[str, str] = await get_ip_info(session, ip_address)
 
             if not ip_info:
                 return {}
 
-            database.store_entry(ip_address, ip_info)
+            ip_db.store_entry(ip_address, ip_info)
 
     return process_ip_info
 

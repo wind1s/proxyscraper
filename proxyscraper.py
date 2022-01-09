@@ -37,7 +37,7 @@ Custom proxy key value pair:
 from typing import Iterable, Dict, Any
 from math import ceil
 from datetime import timedelta
-from ipinfo import get_ip_info, IP_DB_PATH, process_ip_info_wrapper
+from ipinfo import IP_DB_PATH, process_ip_info_wrapper
 from json import loads
 from aiohttp import ClientSession
 from asynchttprequest import AsyncRequest, run_async_requests, ProcessRequest
