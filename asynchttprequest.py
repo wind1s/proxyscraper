@@ -10,6 +10,30 @@ from asyncrequest import AsyncRequest
 ProcessRequest = Callable[ClientSession, AsyncRequest]
 
 
+class AsyncRequest:
+    def __init__(self, method: str, url: str, **kwargs: Any):
+        self.method: str = method
+        self.url: str = url
+
+        self.__data: Dict[str, str] = {"method": self.method, "url": self.url, **kwargs}
+
+    def __getitem__(self, key: str) -> str:
+        return self.__data[str]
+
+    def __setitem__(self, key, value) -> None:
+        if key == "method":
+            self.method = value
+        elif key == "url":
+            self.url = value
+
+        self.__data[key] = value
+
+    async def send(self, session: ClientSession, **extra_data) -> str:
+        print({**self.__data})
+        async with session.request(**self.__data, **extra_data) as response:
+            return await response.read()
+
+
 async def limit_coros(coros: Iterable[Any], limit: int) -> Iterable[Any]:
     """
     Runs a limited amount of coroutines at a time. Runs a new coroutine when one finishes.
@@ -37,7 +61,7 @@ def run_async_requests(
     requests: Iterable[AsyncRequest],
     process_request: Union[ProcessRequest, Iterable[ProcessRequest]],
     base_url: Optional[str] = None,
-    limit: Optional[int] = 1000,
+    limit: int = 1000,
 ) -> None:
     """Creates coroutines for all requests and runs them async."""
 
