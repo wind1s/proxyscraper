@@ -5,9 +5,6 @@ from typing import Optional, Any, Iterable, Dict, Callable, Union
 from itertools import islice
 from asyncio import ensure_future, sleep, run
 from aiohttp import ClientSession
-from asyncrequest import AsyncRequest
-
-ProcessRequest = Callable[ClientSession, AsyncRequest]
 
 
 class AsyncRequest:
@@ -32,6 +29,9 @@ class AsyncRequest:
         print({**self.__data})
         async with session.request(**self.__data, **extra_data) as response:
             return await response.read()
+
+
+ProcessRequest = Callable[ClientSession, AsyncRequest]
 
 
 async def limit_coros(coros: Iterable[Any], limit: int) -> Iterable[Any]:
