@@ -1,11 +1,11 @@
 """
 Defines curl get wrappers.
 """
-from pycurl import Curl, CAINFO, SSL_VERIFYPEER, USERAGENT, URL, WRITEDATA, HTTPHEADER
 from json import loads
 from json.decoder import JSONDecodeError
-from certifi import where
 from io import BytesIO
+from pycurl import Curl, CAINFO, SSL_VERIFYPEER, USERAGENT, URL, WRITEDATA, HTTPHEADER
+from certifi import where
 
 
 def curl_get(url, options):
@@ -16,16 +16,15 @@ def curl_get(url, options):
     curl = Curl()
 
     curl_options = {
-        CAINFO: where(),
-        SSL_VERIFYPEER: 0,
-        USERAGENT: "Firefox/94.0",
         URL: url,
         WRITEDATA: buffer,
+        USERAGENT: "Firefox/94.0",
+        CAINFO: where(),
+        SSL_VERIFYPEER: 0,
         **options,
     }
 
     set_curl_options(curl_options, curl)
-
     curl.perform()
     curl.close()
 
