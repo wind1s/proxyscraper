@@ -7,10 +7,10 @@ class AsyncRequest:
     def __init__(self, method: str, url: str, **kwargs: Any):
         self.method: str = method
         self.url: str = url
-        self.__data: Dict[Any, Any] = {"method": self.method, "url": self.url, **kwargs}
+        self.__data: Dict[str, str] = {"method": self.method, "url": self.url, **kwargs}
 
-    def __getitem__(self, key: Any) -> Any:
-        return self.__data[key]
+    def __getitem__(self, key: str) -> str:
+        return self.__data[str]
 
     def __setitem__(self, key, value) -> None:
         if key == "method":
@@ -20,7 +20,7 @@ class AsyncRequest:
 
         self.__data[key] = value
 
-    async def send(self, session: ClientSession, **extra_data):
+    async def send(self, session: ClientSession, **extra_data) -> str:
         async with session.request(**self.__data, **extra_data) as response:
             return await response.read()
 
