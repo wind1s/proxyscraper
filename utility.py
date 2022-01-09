@@ -3,14 +3,6 @@ Provides utility function for database and ip address.
 """
 from math import comb
 from typing import Dict, Any, Iterable
-from asyncrequest import AsyncRequest
-
-
-def extract_ip(request: AsyncRequest) -> str:
-    """
-    Extracts the ip address from a url reference in a request obj.
-    """
-    return request.url[1:]
 
 
 def extract_keys(dct: Dict[Any, Any], keys: Iterable[Any]) -> Dict[Any, Any]:

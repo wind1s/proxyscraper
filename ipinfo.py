@@ -24,11 +24,11 @@ Json layout:
 from typing import Dict, Callable
 from datetime import timedelta
 from itertools import islice
+from json import loads
 from aiohttp import ClientSession
-from asynchttprequest import run_async_requests
-from utility import extract_keys, extract_ip
+from asynchttprequest import AsyncRequest, run_async_requests
+from utility import extract_keys
 from database import Database
-from asyncrequest import AsyncRequest
 
 IP_DB_NAME = "ip.db"
 IP_DB_PATH = f"{IP_DB_NAME}"
@@ -45,9 +45,13 @@ IP_INFO_RESPONSE_KEYS = (
 )
 
 
-async def get_ip_info(session: ClientSession, request: AsyncRequest) -> Dict[str, str]:
+async def get_ip_info(session: ClientSession, ip_address: str) -> Dict[str, str]:
     """"""
-    response = await request.accept_json(session)
+    base_url = "https://ipinfo.io"
+    request = AsyncRequest(
+        "GET", "/".join((base_url, ip_address)), headers={"Accept": "application/json"}
+    )
+    response = loads(await request.send(session))
 
     if "error" in response:
         return {}
@@ -56,12 +60,15 @@ async def get_ip_info(session: ClientSession, request: AsyncRequest) -> Dict[str
 
 
 def process_ip_info_wrapper(database: Database):
-    async def process_ip_info(session: ClientSession, request: AsyncRequest) -> None:
+    async def process_ip_info(session: ClientSession, ip_address: str) -> None:
         """ """
-        ip_address: str = extract_ip(request)
 
         if database.key_expired(ip_address, IP_DB_EXPIRE_TIME):
-            ip_info: Dict[str, str] = await get_ip_info(session, request)
+            ip_info: Dict[str, str] = await get_ip_info(session, ip_address)
+
+            if not ip_info:
+                return {}
+
             database.store_entry(ip_address, ip_info)
 
     return process_ip_info
@@ -78,22 +85,15 @@ def ip_info():
                         for j4 in range(256):
                             f.write(f"{j1}.{j2}.{j3}.{j4}\n")
         """
-        base_url = "https://ipinfo.io"
 
         with open("ip_addresses.txt", "r", encoding="utf-8") as file:
-            ip_info_requests = []
-            ip_info_process_funcs = []
-            for line in islice(file, 0, 5):
+            ip_info_requests = (line.strip("\n") for line in islice(file, 0, 5))
 
-                line = line.strip("\n")
-                ip_info_requests.append(AsyncRequest("GET", f"/{line}"))
-                ip_info_process_funcs.append(process_ip_info_wrapper(db))
-
-            run_async_requests(ip_info_requests, ip_info_process_funcs, base_url, 1000)
+            run_async_requests(ip_info_requests, process_ip_info_wrapper(db))
 
 
 if __name__ == "__main__":
-    # ip_info()
+    ip_info()
     import diskcache
 
     db = diskcache.Cache(IP_DB_PATH)

@@ -11,7 +11,6 @@ class AsyncRequest:
     def __init__(self, method: str, url: str, **kwargs: Any):
         self.method: str = method
         self.url: str = url
-
         self.__data: Dict[str, str] = {"method": self.method, "url": self.url, **kwargs}
 
     def __getitem__(self, key: str) -> str:
@@ -25,13 +24,12 @@ class AsyncRequest:
 
         self.__data[key] = value
 
-    async def send(self, session: ClientSession, **extra_data) -> str:
-        print({**self.__data})
+    async def send(self, session: ClientSession, **extra_data: Any) -> str:
         async with session.request(**self.__data, **extra_data) as response:
             return await response.read()
 
 
-ProcessRequest = Callable[ClientSession, AsyncRequest]
+ProcessRequest = Callable[ClientSession, Any]
 
 
 async def limit_coros(coros: Iterable[Any], limit: int) -> Iterable[Any]:
@@ -58,7 +56,7 @@ async def limit_coros(coros: Iterable[Any], limit: int) -> Iterable[Any]:
 
 
 def run_async_requests(
-    requests: Iterable[AsyncRequest],
+    requests_data: Iterable[AsyncRequest],
     process_request: Union[ProcessRequest, Iterable[ProcessRequest]],
     base_url: Optional[str] = None,
     limit: int = 1000,
@@ -68,9 +66,9 @@ def run_async_requests(
     async def launch():
         async with ClientSession(base_url=base_url) as session:
             if isinstance(process_request, Iterable):
-                coros = (proc(session, request) for request, proc in zip(requests, process_request))
+                coros = (proc(session, data) for proc, data in zip(process_request, requests_data))
             else:
-                coros = (process_request(session, request) for request in requests)
+                coros = (process_request(session, data) for data in requests_data)
 
             return await limit_coros(coros, limit)
 
