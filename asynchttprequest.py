@@ -1,7 +1,7 @@
 """
 Provides functionality to make async http requests.
 """
-from typing import Optional, Any, Iterable, Dict, Callable, Union
+from typing import Optional, Any, Iterable, Callable, Union
 from itertools import islice
 from asyncio import ensure_future, sleep, run
 from aiohttp import ClientSession
@@ -11,7 +11,7 @@ class AsyncRequest:
     def __init__(self, method: str, url: str, **kwargs: Any):
         self.method: str = method
         self.url: str = url
-        self.__data: Dict[str, str] = {"method": self.method, "url": self.url, **kwargs}
+        self.__data: dict[str, str] = {"method": self.method, "url": self.url, **kwargs}
 
     def __getitem__(self, key: str) -> str:
         return self.__data[str]

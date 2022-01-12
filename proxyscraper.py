@@ -34,7 +34,7 @@ Custom proxy key value pair:
     }
 """
 
-from typing import Iterable, Dict, Any
+from typing import Iterable, Any
 from math import ceil
 from datetime import timedelta
 from ipinfo import IP_DB_PATH, process_ip_info_wrapper
@@ -63,7 +63,7 @@ PROXYLIST_RESPONSE_KEYS = (
 )
 
 
-def forge_complete_proxy_data(ip_info: Dict[str, str], proxylist: Dict[str, str]) -> Dict[str, Any]:
+def forge_complete_proxy_data(ip_info: dict[str, str], proxylist: dict[str, str]) -> dict[str, Any]:
     """
     Creates the custom database entry for a proxies data.
     """
@@ -85,22 +85,10 @@ def forge_complete_proxy_data(ip_info: Dict[str, str], proxylist: Dict[str, str]
     return db_entry
 
 
-def forge_requests(base_url: str, url_ref: str, page_limit: int) -> Iterable[AsyncRequest]:
-    """
-    Creates the request arguments to get all proxies currently listed.
-    Amount of requests is based on the limit of proxies each request should take.
-    """
-    proxy_count = curl_get_json(base_url + url_ref.format(1, 1))["total"]
-    request_count = ceil(proxy_count / page_limit)
-
-    # Return a generator with all page numbers.
-    return range(1, request_count + 1)
-
-
 def process_proxy_data_wrapper(proxy_db: Database, ip_db: Database) -> ProcessRequest:
     process_ip_info = process_ip_info_wrapper(ip_db)
 
-    async def process_proxy_data(session: ClientSession, proxy_data: Dict[str, str]) -> None:
+    async def process_proxy_data(session: ClientSession, proxy_data: dict[str, str]) -> None:
         """
         Retrieves and stores a proxies data.
         """
@@ -115,23 +103,29 @@ def process_proxy_data_wrapper(proxy_db: Database, ip_db: Database) -> ProcessRe
     return process_proxy_data
 
 
-def get_proxylist(page_limit: int) -> Iterable[Dict[str, str]]:
+def get_proxylist(page_limit: int) -> Iterable[dict[str, str]]:
     """
     Asynchronosly requests the list of proxies.
     """
     base_url = "https://proxylist.geonode.com"
-    ref_template = f"/api/proxy-list?limit={page_limit}&page={0}"
+    ref_template = f"/api/proxy-list?limit={0}&page={1}"
+    request_ref_template = ref_template.format(page_limit)
+
+    # Get the range of page numbers to use for requesting all proxies
+    # currently available from the api.
+    proxy_count = curl_get_json(base_url + ref_template.format(1, 1))["total"]
+    request_count = ceil(proxy_count / page_limit)
+    page_numbers = range(1, request_count + 1)
 
     responses = []
-    requests_data = forge_requests(base_url, ref_template, page_limit)
 
     async def proxylist_request(session: ClientSession, page_number: int):
         request = AsyncRequest(
-            "GET", ref_template.format(page_number), headers={"Accept": "application/json"}
+            "GET", request_ref_template.format(page_number), headers={"Accept": "application/json"}
         )
         responses.append(loads(await request.send(session)))
 
-    run_async_requests(requests_data, proxylist_request, base_url)
+    run_async_requests(page_numbers, proxylist_request, base_url)
 
     # Each request contains a data key which holds the proxy list.
     return (data for response in responses for data in response["data"])

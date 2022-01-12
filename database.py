@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 from datetime import datetime, timedelta
 from diskcache import Cache
 
@@ -37,7 +37,7 @@ class Database:
 
         return True
 
-    def store_entry(self, key: Any, data: Dict[Any, Any]) -> None:
+    def store_entry(self, key: Any, data: dict[Any, Any]) -> None:
         """
         Stores an key with it's data and adds a timestamp
         """
