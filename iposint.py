@@ -2,7 +2,6 @@
 
 from argparse import ArgumentParser
 
-parser = ArgumentParser("IP address Open Source Intelligence")
 
 """
 Features.
@@ -14,5 +13,28 @@ Choose to compress output.
 
 """
 
-parser.add_argument()
-parser.add_argument()
+parser = ArgumentParser("IP address Open Source Intelligence")
+
+parser.add_argument(
+    "-o",
+    "--outtype",
+    dest="outtype",
+    default="csv",
+    choices=("csv", "json", "xml", "sqlite"),
+    help="File output type",
+)
+parser.add_argument(
+    "-i",
+    "--intype",
+    dest="intype",
+    default="txt",
+    choices=("txt", "csv", "stdin"),
+    help="File input type",
+)
+parser.add_argument(
+    "-z",
+    "--compress",
+    dest="compress",
+    action="store_true",
+    help="Compress the output",
+)

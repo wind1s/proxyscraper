@@ -6,30 +6,33 @@ from itertools import islice
 from asyncio import ensure_future, sleep, run
 from aiohttp import ClientSession
 
+ProcessRequest = Callable[ClientSession, Any]
+
 
 class AsyncRequest:
+    """Wrapper class for storing request data and sending async request."""
+
     def __init__(self, method: str, url: str, **kwargs: Any):
-        self.method: str = method
-        self.url: str = url
-        self.__data: dict[str, str] = {"method": self.method, "url": self.url, **kwargs}
+        self.__data: dict[str, str] = {"method": method, "url": url, **kwargs}
 
-    def __getitem__(self, key: str) -> str:
-        return self.__data[str]
+    def get(self, key: str) -> str:
+        """"""
+        return self.__data[key]
 
-    def __setitem__(self, key, value) -> None:
-        if key == "method":
-            self.method = value
-        elif key == "url":
-            self.url = value
-
+    def set(self, key: str, value: Any) -> None:
+        """"""
         self.__data[key] = value
 
+    def __getitem__(self, key: str) -> str:
+        return self.get(key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.set(key, value)
+
     async def send(self, session: ClientSession, **extra_data: Any) -> str:
+        """"""
         async with session.request(**self.__data, **extra_data) as response:
             return await response.read()
-
-
-ProcessRequest = Callable[ClientSession, Any]
 
 
 async def limit_coros(coros: Iterable[Any], limit: int) -> Iterable[Any]:
