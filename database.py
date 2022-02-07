@@ -7,7 +7,7 @@ class Database:
     TIME_FORMAT = "%Y/%m/%d %H:%M:%S"
 
     def __init__(self, path: str) -> None:
-        self.database = Cache(path)
+        self.__database = Cache(path)
 
     def __enter__(self):
         return self
@@ -17,14 +17,17 @@ class Database:
 
     def close(self) -> None:
         """Closes the database object."""
-        self.database.close()
+        self.__database.close()
+
+    def get_entries(self):
+        return list(self.__database)
 
     def __contains__(self, key: Any) -> bool:
         """Checks if an ip address exists as an entry in a database."""
-        return self.database != None and key in self.database
+        return self.__database != None and key in self.__database
 
     def get(self, key: Any) -> Any:
-        return self.database.get(key)
+        return self.__database.get(key)
 
     def key_expired(self, key: Any, expire_time: timedelta) -> bool:
         """
@@ -42,4 +45,4 @@ class Database:
         Stores an key with it's data and adds a timestamp
         """
         data["entry_time"] = datetime.now().strftime(Database.TIME_FORMAT)
-        self.database.set(key, data)
+        self.__database.set(key, data)

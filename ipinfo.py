@@ -22,17 +22,16 @@ Json layout:
     }
 """
 from typing import Iterable
-from datetime import timedelta
-from itertools import islice
+from sys import stderr
 from json import loads
+from datetime import timedelta
+from logging import Logger
 from aiohttp import ClientSession
 from asynchttprequest import AsyncRequest, run_async_requests
-from utility import extract_keys
+from utility import extract_keys, IP_INFO_LOG
 from database import Database
+from requestlogging import log_request, init_logger
 
-IP_DB_NAME = "ip.db"
-IP_DB_PATH = f"{IP_DB_NAME}"
-IP_DB_EXPIRE_TIME = timedelta(days=365)
 IP_INFO_RESPONSE_KEYS = (
     "hostname",
     "city",
@@ -45,55 +44,37 @@ IP_INFO_RESPONSE_KEYS = (
 )
 
 
-async def get_ip_info(session: ClientSession, ip_address: str) -> dict[str, str]:
-    """"""
+async def fetch_ip_info(session: ClientSession, ip_address: str, logger: Logger) -> dict[str, str]:
     base_url = "https://ipinfo.io"
     request = AsyncRequest(
         "GET", "/".join((base_url, ip_address)), headers={"Accept": "application/json"}
     )
-    response = loads(await request.send(session))
 
-    if "error" in response:
+    response = loads(await log_request(request, session, logger))
+
+    if response is None or "error" in response or response["bogon"]:
         return {}
 
     return extract_keys(response, IP_INFO_RESPONSE_KEYS)
 
 
-def process_ip_info_wrapper(ip_database: Database):
-    async def process_ip_info(session: ClientSession, ip_address: str) -> None:
-        """ """
+def parse_ip_info_wrapper(ip_database: Database, logger: Logger, expire_time: timedelta):
+    async def parse_ip_info(session: ClientSession, ip_address: str) -> None:
+        if ip_database.key_expired(ip_address, expire_time):
+            ip_info = await fetch_ip_info(session, ip_address, logger)
 
-        if ip_database.key_expired(ip_address, IP_DB_EXPIRE_TIME):
-            ip_info: dict[str, str] = await get_ip_info(session, ip_address)
+            if ip_info:
+                ip_database.store_entry(ip_address, ip_info)
 
-            if not ip_info:
-                return {}
-
-            ip_database.store_entry(ip_address, ip_info)
-
-    return process_ip_info
+    return parse_ip_info
 
 
-def ip_info(ip_addresses: Iterable[str], output_path: str) -> None:
-    with Database(output_path) as database:
-        run_async_requests(ip_addresses, process_ip_info_wrapper(database))
-
-
-if __name__ == "__main__":
-    """
-    with open("ip_addresses.txt", "w") as f:
-        for j1 in range(1, 2):  # 224
-            for j2 in range(256):
-                for j3 in range(256):
-                    for j4 in range(256):
-                        f.write(f"{j1}.{j2}.{j3}.{j4}\n")
-    """
-    with open("ip_addresses.txt", "r", encoding="utf-8") as file:
-        ip_addresses = (line.strip("\n") for line in islice(file, 0, 5))
-        ip_info(ip_addresses, IP_DB_PATH)
-
-    import diskcache
-
-    db = diskcache.Cache(IP_DB_PATH)
-    for ip in db:
-        print(ip, db.get(ip))
+def ip_info(
+    ip_addresses: Iterable[str],
+    ip_database: Database,
+    expire_time: timedelta,
+) -> None:
+    run_async_requests(
+        ip_addresses,
+        parse_ip_info_wrapper(ip_database, init_logger(IP_INFO_LOG, stderr), expire_time),
+    )

@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-from sys import argv, exit as sys_exit
-from utility import DEFAULT_OUTFILE, CACHE_MODES, NO_CACHE_MODE
+from sys import argv
+from datetime import timedelta
+from ipinfo import ip_info
+from database import Database
+from utility import (
+    DEFAULT_OUTFILE,
+    IP_DB_PATH,
+    IP_DB_EXPIRE_TIME,
+)
+
 
 """
 Features.
@@ -19,38 +27,57 @@ url regex
 """
 
 
-parser = ArgumentParser("IP OSINT", description="Gathers ")
+def init_args():
+    parser = ArgumentParser(
+        "IP OSINT", description="Gather ip addresses intelligence on a large scale."
+    )
 
-parser.add_argument(
-    "input",
-    nargs=1,
-    type=str,
-    help="Input file path.",
-)
-parser.add_argument(
-    "output",
-    nargs="?",
-    type=str,
-    default=DEFAULT_OUTFILE,
-    help=f"Output file path (default {DEFAULT_OUTFILE}).",
-)
-parser.add_argument(
-    "--cache-mode",
-    dest="cache_mode",
-    choices=CACHE_MODES,
-    help="Set cache mode.",
-)
-parser.add_argument(
-    "--no-output", dest="no_output", action="store_true", help="Do not output any results."
-)
-parser.add_argument(
-    "-v", "--verbose", dest="verbose", action="store_true", help="Output more detailed information."
-)
+    parser.add_argument(
+        "input",
+        nargs=1,
+        type=str,
+        help="Input file path.",
+    )
+    parser.add_argument(
+        "output",
+        nargs="?",
+        type=str,
+        default=DEFAULT_OUTFILE,
+        help=f"Output file path (default {DEFAULT_OUTFILE}).",
+    )
+    parser.add_argument(
+        "--update-cache",
+        dest="update_cache",
+        action="store_true",
+        help="Set cache mode.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        help="Output more detailed information.",
+    )
 
-# "../test1.txt", "../test2.txt"
-# args = parser.parse_args([])
-args = parser.parse_args(argv)
+    args = parser.parse_args(argv[1:])
 
-if args.no_output and args.cache_mode == NO_CACHE_MODE:
-    parser.error("--no_output and --cache_mode=none can't be set simultaneously")
-    sys_exit()
+    return args
+
+
+def main(args):
+    expire_time = IP_DB_EXPIRE_TIME
+
+    if args.update_cache:
+        expire_time = timedelta(0)
+
+    with Database(IP_DB_PATH) as ip_database:
+        ip_info(args.input, ip_database, expire_time)
+        print(ip_database.get("234.54.23.2"))
+
+
+main(init_args())
+"""
+async def write_json(json_stream: IO, json_data):
+    await json_stream.write(json.dumps(json_data))
+
+"""

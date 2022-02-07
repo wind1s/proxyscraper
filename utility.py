@@ -3,32 +3,21 @@ Provides utility function for database and ip address.
 """
 from math import comb
 from typing import Dict, Any, Iterable
-from re import compile as re_compile
-from functools import lru_cache
+from datetime import timedelta
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
+IP_INFO_LOG = "ipinfo.log"
+IP_DB_NAME = "ip.db"
+IP_DB_PATH = f"{IP_DB_NAME}"
+IP_DB_EXPIRE_TIME = timedelta(days=365)
+
+PROXY_DB_NAME = "proxies.db"
+PROXY_DB_PATH = f"{PROXY_DB_NAME}"
+PROXY_DB_EXPIRE_TIME = timedelta(hours=2)
+
 DEFAULT_OUTFILE = "iposint.json"
-UPDATE_CACHE_MODE = "update"
-NO_CACHE_MODE = "none"
-CACHE_MODES = (NO_CACHE_MODE, UPDATE_CACHE_MODE)
-LRU_CACHE_SIZE = 128
 
 
-# Regex to match URLs.
-URL_RE = re_compile(
-    r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)"
-)
-
-
-@lru_cache(maxsize=LRU_CACHE_SIZE)
-def is_url(string: str) -> bool:
-    """
-    Validates a string for URL.
-    """
-    return bool(URL_RE.match(string))
-
-
-@lru_cache(maxsize=LRU_CACHE_SIZE)
 def is_ipv4(string: str) -> bool:
     """
     Validates a string for IPv4.
@@ -41,7 +30,6 @@ def is_ipv4(string: str) -> bool:
     return isinstance(result, IPv4Address)
 
 
-@lru_cache(maxsize=LRU_CACHE_SIZE)
 def is_ipv6(string: str) -> bool:
     """
     Validates a string for IPv6.
