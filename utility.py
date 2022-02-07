@@ -3,6 +3,55 @@ Provides utility function for database and ip address.
 """
 from math import comb
 from typing import Dict, Any, Iterable
+from re import compile as re_compile
+from functools import lru_cache
+from ipaddress import ip_address, IPv4Address, IPv6Address
+
+DEFAULT_OUTFILE = "iposint.json"
+UPDATE_CACHE_MODE = "update"
+NO_CACHE_MODE = "none"
+CACHE_MODES = (NO_CACHE_MODE, UPDATE_CACHE_MODE)
+LRU_CACHE_SIZE = 128
+
+
+# Regex to match URLs.
+URL_RE = re_compile(
+    r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)"
+)
+
+
+@lru_cache(maxsize=LRU_CACHE_SIZE)
+def is_url(string: str) -> bool:
+    """
+    Validates a string for URL.
+    """
+    return bool(URL_RE.match(string))
+
+
+@lru_cache(maxsize=LRU_CACHE_SIZE)
+def is_ipv4(string: str) -> bool:
+    """
+    Validates a string for IPv4.
+    """
+    try:
+        result = ip_address(string)
+    except ValueError:
+        return False
+
+    return isinstance(result, IPv4Address)
+
+
+@lru_cache(maxsize=LRU_CACHE_SIZE)
+def is_ipv6(string: str) -> bool:
+    """
+    Validates a string for IPv6.
+    """
+    try:
+        result = ip_address(string)
+    except ValueError:
+        return False
+
+    return isinstance(result, IPv6Address)
 
 
 def extract_keys(dct: Dict[Any, Any], keys: Iterable[Any]) -> Dict[Any, Any]:
