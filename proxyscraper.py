@@ -37,17 +37,17 @@ Custom proxy key value pair:
 from typing import Iterable, Any
 from math import ceil
 from datetime import timedelta
-from ipinfo import IP_DB_PATH, process_ip_info_wrapper
 from json import loads
+from ipinfo import create_ip_info_parser
 from aiohttp import ClientSession
-from asynchttprequest import AsyncRequest, run_async_requests, ProcessRequest
+from asynchttprequest import AsyncRequest, run_async_requests, ParseRequest
 from database import Database
 from curlget import curl_get_json
-from utility import try_get_key, extract_keys
+from requestlogging import log_request, get_default_logger, log_db_entry_status
+from utility import try_get_key, extract_keys, str_join
+from config import IP_DB_NAME, PROXY_DB_NAME
 
-PROXY_DB_NAME = "proxies.db"
-PROXY_DB_PATH = f"{PROXY_DB_NAME}"
-PROXY_DB_EXPIRE_TIME = timedelta(hours=2)
+
 PROXYLIST_RESPONSE_KEYS = (
     "port",
     "anonymityLevel",
@@ -63,7 +63,7 @@ PROXYLIST_RESPONSE_KEYS = (
 )
 
 
-def forge_complete_proxy_data(ip_info: dict[str, str], proxylist: dict[str, str]) -> dict[str, Any]:
+def forge_proxy_entry(ip_info: dict[str, str], proxylist: dict[str, str]) -> dict[str, Any]:
     """
     Creates the custom database entry for a proxies data.
     """
@@ -85,65 +85,94 @@ def forge_complete_proxy_data(ip_info: dict[str, str], proxylist: dict[str, str]
     return db_entry
 
 
-def process_proxy_data_wrapper(proxy_db: Database, ip_db: Database) -> ProcessRequest:
-    process_ip_info = process_ip_info_wrapper(ip_db)
+def create_proxy_data_parser(
+    proxy_db: Database, ip_db: Database, proxy_expire_time: timedelta, ip_expire_time: timedelta
+) -> ParseRequest:
+    parse_ip_info = create_ip_info_parser(ip_db, ip_expire_time)
 
-    async def process_proxy_data(session: ClientSession, proxy_data: dict[str, str]) -> None:
+    async def parse_proxy_data(session: ClientSession, proxy_data: dict[str, str]) -> None:
         """
-        Retrieves and stores a proxies data.
+        Retrieves and stores a proxies data, including it's ip address data separetly.
         """
         ip_address = proxy_data["ip"]
-        await process_ip_info(session, ip_address)
+        await parse_ip_info(session, ip_address)
 
-        if proxy_db.key_expired(ip_address, PROXY_DB_EXPIRE_TIME):
+        if proxy_db.key_expired(ip_address, proxy_expire_time):
             ip_info = ip_db.get(ip_address)
-            db_entry = forge_complete_proxy_data(ip_info, proxy_data)
+            db_entry = forge_proxy_entry(ip_info, proxy_data)
             proxy_db.store_entry(ip_address, db_entry)
 
-    return process_proxy_data
+    return parse_proxy_data
 
 
-def get_proxylist(page_limit: int) -> Iterable[dict[str, str]]:
+def fetch_proxylist(page_limit: int, request_limit: int) -> Iterable[dict[str, str]]:
     """
-    Asynchronosly requests the list of proxies.
+    Asynchronosly requests a list of proxies from proxylist.geonode.com.
     """
     base_url = "https://proxylist.geonode.com"
-    ref_template = f"/api/proxy-list?limit={0}&page={1}"
-    request_ref_template = ref_template.format(page_limit)
+    api_ref_template = "/api/proxy-list?limit={}&page={{}}"
+    proxylist_api_template = api_ref_template.format(page_limit)
+    single_proxy_query_url = str_join(base_url, api_ref_template.format(1, 1))
 
-    # Get the range of page numbers to use for requesting all proxies
-    # currently available from the api.
-    proxy_count = curl_get_json(base_url + ref_template.format(1, 1))["total"]
-    request_count = ceil(proxy_count / page_limit)
-    page_numbers = range(1, request_count + 1)
-
+    log = get_default_logger()
+    request = AsyncRequest("GET", "", headers={"Accept": "application/json"})
     responses = []
 
-    async def proxylist_request(session: ClientSession, page_number: int):
-        request = AsyncRequest(
-            "GET", request_ref_template.format(page_number), headers={"Accept": "application/json"}
-        )
-        responses.append(loads(await request.send(session)))
+    def fetch_page_range():
+        # Get the range of page numbers to use for requesting all proxies
+        # currently available from the api.
+        response = curl_get_json(single_proxy_query_url)
 
-    run_async_requests(page_numbers, proxylist_request, base_url)
+        if response is None:
+            log.error("Could not fetch proxy count from %s", single_proxy_query_url)
+            return range(0)
+
+        proxy_count = response["total"]
+        request_count = ceil(proxy_count / page_limit)
+        return range(1, request_count + 1)
+
+    async def proxylist_request(session: ClientSession, page_number: int):
+        request.url = proxylist_api_template.format(page_number)
+        resp = await log_request(request, session)
+
+        # If response is none, an error occurred and the fetch could not be made.
+        if resp is None:
+            log.warning("Could not fetch proxylist from %s", request.url)
+            return
+
+        # Response contains a key data with all the proxies data.
+        proxylist_data = loads(resp)["data"]
+        log.info("Fetched %d proxies from page %d", len(proxylist_data), page_number)
+        responses.append(proxylist_data)
+
+    run_async_requests(
+        fetch_page_range(), proxylist_request, base_url=base_url, limit=request_limit
+    )
 
     # Each request contains a data key which holds the proxy list.
-    return (data for response in responses for data in response["data"])
+    return (proxy_data for proxylist in responses for proxy_data in proxylist)
 
 
-def proxy_scraper():
-    with Database(PROXY_DB_PATH) as proxy_db, Database(IP_DB_PATH) as ip_db:
-        proxylist = get_proxylist(100)
-        run_async_requests(proxylist, process_proxy_data_wrapper(proxy_db, ip_db))
+def proxy_scraper(
+    proxy_db: Database,
+    ip_db: Database,
+    proxy_expire_time: timedelta,
+    ip_expire_time: timedelta,
+    limit: int,
+):
 
+    proxylist = fetch_proxylist(100, limit)
 
-if __name__ == "__main__":
-    # proxy_scraper()
+    prev_proxy_db_count = proxy_db.get_count()
+    prev_ip_db_count = ip_db.get_count()
 
-    import diskcache
+    run_async_requests(
+        proxylist,
+        create_proxy_data_parser(proxy_db, ip_db, proxy_expire_time, ip_expire_time),
+        limit=limit,
+    )
 
-    db = diskcache.Cache(PROXY_DB_PATH)
-
-    for ip in db:
-        print(ip, db.get(ip)["hostname"])
-    print(len(db))
+    new_proxies_count = proxy_db.get_count() - prev_proxy_db_count
+    new_ips_count = ip_db.get_count() - prev_ip_db_count
+    log_db_entry_status(new_proxies_count, PROXY_DB_NAME)
+    log_db_entry_status(new_ips_count, IP_DB_NAME)

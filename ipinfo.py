@@ -22,15 +22,13 @@ Json layout:
     }
 """
 from typing import Iterable
-from sys import stderr
 from json import loads
 from datetime import timedelta
-from logging import Logger
 from aiohttp import ClientSession
 from asynchttprequest import AsyncRequest, run_async_requests
-from utility import extract_keys, IP_INFO_LOG
 from database import Database
-from requestlogging import log_request, init_logger
+from requestlogging import get_default_logger, log_request
+from utility import extract_keys, str_join
 
 IP_INFO_RESPONSE_KEYS = (
     "hostname",
@@ -44,24 +42,36 @@ IP_INFO_RESPONSE_KEYS = (
 )
 
 
-async def fetch_ip_info(session: ClientSession, ip_address: str, logger: Logger) -> dict[str, str]:
-    base_url = "https://ipinfo.io"
+async def fetch_ip_info(session: ClientSession, ip_address: str) -> dict[str, str]:
+    log = get_default_logger()
+    base_url = "https://ipinfo.io/"
     request = AsyncRequest(
-        "GET", "/".join((base_url, ip_address)), headers={"Accept": "application/json"}
+        "GET", str_join(base_url, ip_address), headers={"Accept": "application/json"}
     )
 
-    response = loads(await log_request(request, session, logger))
+    response = await log_request(request, session)
 
-    if response is None or "error" in response or response["bogon"]:
+    if response is None:
         return {}
 
-    return extract_keys(response, IP_INFO_RESPONSE_KEYS)
+    resp_json = loads(response)
+
+    if "error" in resp_json:
+        log.error("Response contained error %s", resp_json["error"])
+        return {}
+
+    if "bogon" in resp_json:
+        log.info("Unnecessary request of bogon ip address")
+        return {}
+
+    log.debug("Fetched ip info of ip address %s", ip_address)
+    return extract_keys(resp_json, IP_INFO_RESPONSE_KEYS)
 
 
-def parse_ip_info_wrapper(ip_database: Database, logger: Logger, expire_time: timedelta):
+def create_ip_info_parser(ip_database: Database, expire_time: timedelta):
     async def parse_ip_info(session: ClientSession, ip_address: str) -> None:
         if ip_database.key_expired(ip_address, expire_time):
-            ip_info = await fetch_ip_info(session, ip_address, logger)
+            ip_info = await fetch_ip_info(session, ip_address)
 
             if ip_info:
                 ip_database.store_entry(ip_address, ip_info)
@@ -70,11 +80,11 @@ def parse_ip_info_wrapper(ip_database: Database, logger: Logger, expire_time: ti
 
 
 def ip_info(
-    ip_addresses: Iterable[str],
-    ip_database: Database,
-    expire_time: timedelta,
+    ip_addresses: Iterable[str], ip_database: Database, expire_time: timedelta, limit: int
 ) -> None:
+
     run_async_requests(
         ip_addresses,
-        parse_ip_info_wrapper(ip_database, init_logger(IP_INFO_LOG, stderr), expire_time),
+        create_ip_info_parser(ip_database, expire_time),
+        limit=limit,
     )

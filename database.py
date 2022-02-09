@@ -22,6 +22,9 @@ class Database:
     def get_entries(self):
         return list(self.__database)
 
+    def get_count(self):
+        return len(self.__database)
+
     def __contains__(self, key: Any) -> bool:
         """Checks if an ip address exists as an entry in a database."""
         return self.__database != None and key in self.__database
@@ -32,7 +35,7 @@ class Database:
     def key_expired(self, key: Any, expire_time: timedelta) -> bool:
         """
         Checks if an ip address entry has expired according to an expiry time.
-        If it does not exist at all it counts as being expired.
+        If it does not exist it is considered expired.
         """
         if self.__contains__(key):
             last_entry_time = datetime.strptime(self.get(key)["entry_time"], Database.TIME_FORMAT)

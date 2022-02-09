@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-from sys import argv
+from sys import argv, stderr
 from datetime import timedelta
+from logging import DEBUG, INFO
 from ipinfo import ip_info
+from proxyscraper import proxy_scraper
+from requestlogging import init_logger
 from database import Database
-from utility import (
+from config import (
     DEFAULT_OUTFILE,
     IP_DB_PATH,
     IP_DB_EXPIRE_TIME,
+    PROXY_DB_PATH,
+    PROXY_DB_EXPIRE_TIME,
 )
 
 
@@ -21,9 +26,6 @@ Command line arg input file for ip addresses. File types: txt, csv, stdin.
 Parse urls or files for ip addresses or perform reverse dns lookup on new urls found. Parse these ip addresses.
 
 https://realpython.com/async-io-python/#the-10000-foot-view-of-async-io
-
-url regex
-(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)
 """
 
 
@@ -51,6 +53,22 @@ def init_args():
         action="store_true",
         help="Set cache mode.",
     )
+
+    def check_positive(value):
+        ivalue = int(value)
+
+        if ivalue <= 0:
+            parser.error(f"{value} is an invalid positive int value")
+
+        return ivalue
+
+    parser.add_argument(
+        "--batch-size",
+        dest="batch_size",
+        type=check_positive,
+        default=100,
+        help="Max number of requests to run asynchronous (default 100, more than 1000 is not recommended).",
+    )
     parser.add_argument(
         "-v",
         "--verbose",
@@ -65,14 +83,21 @@ def init_args():
 
 
 def main(args):
+    # Switch to INFO to remove debug messages.
+    init_logger(DEBUG, stderr)
     expire_time = IP_DB_EXPIRE_TIME
 
     if args.update_cache:
         expire_time = timedelta(0)
 
-    with Database(IP_DB_PATH) as ip_database:
-        ip_info(args.input, ip_database, expire_time)
-        print(ip_database.get("234.54.23.2"))
+    with Database(IP_DB_PATH) as ip_database, Database(PROXY_DB_PATH) as proxy_database:
+        proxy_scraper(
+            proxy_database, ip_database, PROXY_DB_EXPIRE_TIME, IP_DB_EXPIRE_TIME, args.batch_size
+        )
+        """
+        ip_info(args.input, ip_database, expire_time, args.batch_size)
+        print(ip_database.get(args.input[0]))
+        """
 
 
 main(init_args())

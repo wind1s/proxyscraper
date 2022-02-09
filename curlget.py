@@ -49,7 +49,7 @@ def curl_get_json(url):
         json_data = loads(data)
 
     except (JSONDecodeError, TypeError):
-        return data
+        return None
 
     return json_data
 

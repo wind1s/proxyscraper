@@ -3,19 +3,7 @@ Provides utility function for database and ip address.
 """
 from math import comb
 from typing import Dict, Any, Iterable
-from datetime import timedelta
 from ipaddress import ip_address, IPv4Address, IPv6Address
-
-IP_INFO_LOG = "ipinfo.log"
-IP_DB_NAME = "ip.db"
-IP_DB_PATH = f"{IP_DB_NAME}"
-IP_DB_EXPIRE_TIME = timedelta(days=365)
-
-PROXY_DB_NAME = "proxies.db"
-PROXY_DB_PATH = f"{PROXY_DB_NAME}"
-PROXY_DB_EXPIRE_TIME = timedelta(hours=2)
-
-DEFAULT_OUTFILE = "iposint.json"
 
 
 def is_ipv4(string: str) -> bool:
@@ -57,6 +45,10 @@ def try_get_key(key: Any, dct: Dict[Any, Any]) -> Any:
         return dct[key]
 
     return None
+
+
+def str_join(*strings, sep=""):
+    return sep.join(strings)
 
 
 def confidence(sample_size: int, reliability: float, lower: int, upper: int) -> float:
