@@ -61,7 +61,7 @@ async def fetch_ip_info(session: ClientSession, ip_address: str) -> dict[str, st
         return {}
 
     if "bogon" in resp_json:
-        log.info("Unnecessary request of bogon ip address")
+        log.info("Bogon ip address, discarding response")
         return {}
 
     log.debug("Fetched ip info of ip address %s", ip_address)

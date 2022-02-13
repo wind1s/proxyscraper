@@ -25,7 +25,7 @@ def init_args(raw_args):
             ivalue = int(value)
 
             if ivalue > upper_bound or ivalue < lower_bound:
-                parser.error(f"{value} is invalid, must be {lower_bound} <= value <= {upper_limit}")
+                parser.error(f"{value} is invalid, must be {lower_bound} <= value <= {upper_bound}")
 
             return ivalue
 
