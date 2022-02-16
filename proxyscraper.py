@@ -8,7 +8,7 @@ from typing import Any
 from argparse import ArgumentParser
 from sys import argv, stderr
 from datetime import timedelta
-from logging import DEBUG, INFO
+from logging import DEBUG, INFO, WARNING
 from scraper import proxy_scraper
 from requestlogging import init_logger
 from database import Database
@@ -22,7 +22,7 @@ from config import (
 
 
 def init_args(raw_args):
-    parser = ArgumentParser("Proxy Scraper", description="Scrapes proxies")
+    parser = ArgumentParser("Proxy Scraper", description="Scrapes proxies asynchronously")
 
     def integer_in_range(lower_bound: int, upper_bound: int):
         def check_value(value: Any):
@@ -68,17 +68,17 @@ def init_args(raw_args):
         ("--fail",): {
             "dest": "fail_rate",
             "type": integer_in_range(0, 100),
-            "help": "Filter after maximum fail rate (%) of proxy connection tries.",
+            "help": "Filter after maximum fail rate (%%) of proxy connection tries.",
         },
         # All anonymity levels above the specifed is also accepted.
-        ("--anon"): {
+        ("--anon",): {
             "dest": "anonymity",
             "choices": ("transparent", "anonymous", "elite"),
             "default": "anonymous",
             "help": "Specify a minimum proxy anonymity level (default anonymous)",
         },
         # Some have none as response time, include them in the result but put them at the bottom.
-        ("--response-time"): {
+        ("--response-time",): {
             "dest": "resp_time",
             "type": integer_in_range(1, 1000),
             "help": "Specify maximal response time (ms) of proxy server ",
@@ -97,30 +97,38 @@ def init_args(raw_args):
         ("-v", "--verbose"): {
             "dest": "verbose",
             "action": "count",
-            "help": "Output more detailed information.",
+            "help": "Output more detailed information (-vv for even more verbose).",
         },
     }
 
     for arg, settings in argument_definitions.items():
         parser.add_argument(*arg, **settings)
 
+    print(raw_args)
     return parser.parse_args(raw_args)
+
+
+def init_verbosity(verbose_count: int) -> int:
+    if verbose_count in (None, 0):
+        return WARNING
+
+    if verbose_count == 1:
+        return INFO
+
+    return DEBUG
 
 
 def main(args):
     # Switch to INFO to remove debug messages.
-    init_logger(DEBUG, stderr)
+
+    init_logger(init_verbosity(args.verbose), stderr)
     expire_time = PROXY_DB_EXPIRE_TIME
 
-    if args.update_cache:
+    if args.update:
         expire_time = timedelta(0)
 
     with Database(IP_DB_PATH) as ip_database, Database(PROXY_DB_PATH) as proxy_database:
         proxy_scraper(proxy_database, ip_database, expire_time, IP_DB_EXPIRE_TIME, args.batch_size)
-        """
-        ip_info(args.input, ip_database, expire_time, args.batch_size)
-        print(ip_database.get(args.input[0]))
-        """
 
 
 main(init_args(argv[1:]))
