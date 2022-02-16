@@ -68,6 +68,7 @@ def forge_proxy_entry(ip_info: dict[str, str], proxylist: dict[str, str]) -> dic
     Creates the custom database entry for a proxies data.
     """
     db_entry = {**extract_keys(proxylist, PROXYLIST_RESPONSE_KEYS), **ip_info}
+    # Creates string of all possible ip origin names.
     db_entry["org"] = ";".join(
         origin
         for origin in (
@@ -81,6 +82,7 @@ def forge_proxy_entry(ip_info: dict[str, str], proxylist: dict[str, str]) -> dic
     db_entry["created_at"].replace("T", " ").replace("Z", "")
     db_entry["updated_at"].replace("T", " ").replace("Z", "")
     # db_entry["corruptionindex"] = get_corruption_index(ip_info["country"])
+    # TODO:
 
     return db_entry
 
@@ -172,6 +174,7 @@ def proxy_scraper(
         limit=limit,
     )
 
+    # Log new ip and proxies entries.
     new_proxies_count = proxy_db.get_count() - prev_proxy_db_count
     new_ips_count = ip_db.get_count() - prev_ip_db_count
     log_db_entry_status(new_proxies_count, PROXY_DB_NAME)

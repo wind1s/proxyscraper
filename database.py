@@ -16,18 +16,28 @@ class Database:
         self.close()
 
     def close(self) -> None:
-        """Closes the database object."""
+        """
+        Closes the database object.
+        """
         self.__database.close()
 
     def get_entries(self):
+        """
+        Retrieve a list of all database keys.
+        """
         return list(self.__database)
 
     def get_count(self):
+        """
+        Retrieve the number of keys in database.
+        """
         return len(self.__database)
 
     def __contains__(self, key: Any) -> bool:
-        """Checks if an ip address exists as an entry in a database."""
-        return self.__database != None and key in self.__database
+        """
+        Checks if an ip address exists as an entry in a database.
+        """
+        return self.__database is not None and key in self.__database
 
     def get(self, key: Any) -> Any:
         return self.__database.get(key)

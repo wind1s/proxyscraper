@@ -1,5 +1,8 @@
 from datetime import timedelta
 
+# TODO: Move config data to a json file and init global variables from that file.
+# Rename this file to something like "configinit" or "readconfig".
+
 IP_DB_NAME = "ip.db"
 IP_DB_PATH = f"{IP_DB_NAME}"
 IP_DB_EXPIRE_TIME = timedelta(days=365)

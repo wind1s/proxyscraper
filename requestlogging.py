@@ -24,6 +24,9 @@ def init_logger(level: int, stream: IO) -> None:
 
 
 async def log_request(request: AsyncRequest, session: ClientSession) -> Union[str, None]:
+    """
+    Logging wrapper around AsyncRequest.send method.
+    """
     log = get_default_logger()
     base_url = session._base_url
     request_full_url = request.url if base_url is None else str_join(str(base_url), request.url)
@@ -52,6 +55,9 @@ async def log_request(request: AsyncRequest, session: ClientSession) -> Union[st
 
 
 def log_db_entry_status(entry_count_diff: int, db_name: str) -> None:
+    """
+    Logs amount of new entries in database depending on before and after length difference.
+    """
     log = get_default_logger()
 
     if entry_count_diff > 0:

@@ -47,7 +47,10 @@ def try_get_key(key: Any, dct: Dict[Any, Any]) -> Any:
     return None
 
 
-def str_join(*strings, sep=""):
+def str_join(*strings, sep="") -> str:
+    """
+    Joins multiple strings with optional separator.
+    """
     return sep.join(strings)
 
 

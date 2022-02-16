@@ -25,7 +25,7 @@ from typing import Iterable
 from json import loads
 from datetime import timedelta
 from aiohttp import ClientSession
-from asynchttprequest import AsyncRequest, run_async_requests
+from asynchttprequest import AsyncRequest, run_async_requests, ParseRequest
 from database import Database
 from requestlogging import get_default_logger, log_request
 from utility import extract_keys, str_join
@@ -43,6 +43,9 @@ IP_INFO_RESPONSE_KEYS = (
 
 
 async def fetch_ip_info(session: ClientSession, ip_address: str) -> dict[str, str]:
+    """
+    Async fetch ip address data from ipinfo.io. Logs errors to logger.
+    """
     log = get_default_logger()
     base_url = "https://ipinfo.io/"
     request = AsyncRequest(
@@ -68,7 +71,7 @@ async def fetch_ip_info(session: ClientSession, ip_address: str) -> dict[str, st
     return extract_keys(resp_json, IP_INFO_RESPONSE_KEYS)
 
 
-def create_ip_info_parser(ip_database: Database, expire_time: timedelta):
+def create_ip_info_parser(ip_database: Database, expire_time: timedelta) -> ParseRequest:
     async def parse_ip_info(session: ClientSession, ip_address: str) -> None:
         if ip_database.key_expired(ip_address, expire_time):
             ip_info = await fetch_ip_info(session, ip_address)
@@ -82,7 +85,6 @@ def create_ip_info_parser(ip_database: Database, expire_time: timedelta):
 def ip_info(
     ip_addresses: Iterable[str], ip_database: Database, expire_time: timedelta, limit: int
 ) -> None:
-
     run_async_requests(
         ip_addresses,
         create_ip_info_parser(ip_database, expire_time),

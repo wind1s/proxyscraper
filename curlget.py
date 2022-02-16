@@ -1,6 +1,7 @@
 """
 Defines curl get wrappers.
 """
+from typing import Optional
 from json import loads
 from json.decoder import JSONDecodeError
 from io import BytesIO
@@ -8,7 +9,7 @@ from pycurl import Curl, CAINFO, SSL_VERIFYPEER, USERAGENT, URL, WRITEDATA, HTTP
 from certifi import where
 
 
-def curl_get(url, options):
+def curl_get(url, options) -> str:
     """
     Initializes a "secure" curl get request.
     """
@@ -33,12 +34,12 @@ def curl_get(url, options):
     return buffer.getvalue().decode("iso-8859-1")
 
 
-def set_curl_options(options, curl):
+def set_curl_options(options, curl) -> None:
     for option, value in options.items():
         curl.setopt(option, value)
 
 
-def curl_get_json(url):
+def curl_get_json(url) -> Optional[dict]:
     """
     Performs a curl get request and returns json data as a dictionary.
     """
@@ -54,6 +55,9 @@ def curl_get_json(url):
     return json_data
 
 
-def curl_get_html(url):
+def curl_get_html(url) -> str:
+    """
+    Helper function to fetch html responses.
+    """
     options = {HTTPHEADER: ["Accept: text/html"]}
     return curl_get(url, options)
