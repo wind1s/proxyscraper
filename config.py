@@ -1,3 +1,8 @@
+"""
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+"""
 from datetime import timedelta
 
 # TODO: Move config data to a json file and init global variables from that file.

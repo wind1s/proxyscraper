@@ -1,7 +1,12 @@
+"""
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+"""
 from typing import Union, IO
 from logging import basicConfig, getLogger, Logger
-from asynchttprequest import AsyncRequest
 from aiohttp import ClientSession, ClientError, http_exceptions
+from asynchttprequest import AsyncRequest
 from utility import str_join
 from config import DEFAULT_LOG_FILE
 

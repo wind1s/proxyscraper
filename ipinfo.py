@@ -1,5 +1,8 @@
-#!/usr/local/env python3
 """
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+
 Retrieves general ip information such as city, region, country,
 coordinates, origin and timezone.
 

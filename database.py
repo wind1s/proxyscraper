@@ -1,9 +1,18 @@
+"""
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+"""
 from typing import Any
 from datetime import datetime, timedelta
 from diskcache import Cache
 
 
 class Database:
+    """
+    Simple database interface. Similar functionality to dictionaries.
+    """
+
     TIME_FORMAT = "%Y/%m/%d %H:%M:%S"
 
     def __init__(self, path: str) -> None:

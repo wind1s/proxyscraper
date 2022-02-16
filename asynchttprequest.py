@@ -1,4 +1,8 @@
 """
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+
 Provides functionality to make async http requests.
 """
 from typing import Optional, Any, Iterable, Callable, Union

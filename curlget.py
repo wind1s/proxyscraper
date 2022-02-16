@@ -1,4 +1,8 @@
 """
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+
 Defines curl get wrappers.
 """
 from typing import Optional
@@ -35,6 +39,9 @@ def curl_get(url, options) -> str:
 
 
 def set_curl_options(options, curl) -> None:
+    """
+    Set options for curl object.
+    """
     for option, value in options.items():
         curl.setopt(option, value)
 

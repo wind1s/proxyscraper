@@ -1,7 +1,9 @@
-#!/usr/local/env python3
 """
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+
 Compiles a database of proxy servers with their respective metadata.
-Also adds country corruption index, server fraud score and more.
 
 Links:
     https://geonode.com/free-proxy-list
@@ -33,13 +35,12 @@ Custom proxy key value pair:
         "entry_time":
     }
 """
-
 from typing import Iterable, Any
 from math import ceil
 from datetime import timedelta
 from json import loads
-from ipinfo import create_ip_info_parser
 from aiohttp import ClientSession
+from ipinfo import create_ip_info_parser
 from asynchttprequest import AsyncRequest, run_async_requests, ParseRequest
 from database import Database
 from curlget import curl_get_json

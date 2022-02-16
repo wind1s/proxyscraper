@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-
+"""
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+"""
 from typing import Any
 from argparse import ArgumentParser
 from sys import argv, stderr

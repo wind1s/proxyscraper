@@ -1,4 +1,8 @@
 """
+* Copyright (c) 2022, William Minidis <william.minidis@protonmail.com>
+*
+* SPDX-License-Identifier: BSD-2-Clause
+
 Provides utility function for database and ip address.
 """
 from math import comb
