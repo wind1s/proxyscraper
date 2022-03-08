@@ -83,7 +83,6 @@ def forge_proxy_entry(ip_info: dict[str, str], proxylist: dict[str, str]) -> dic
     db_entry["created_at"].replace("T", " ").replace("Z", "")
     db_entry["updated_at"].replace("T", " ").replace("Z", "")
     # db_entry["corruptionindex"] = get_corruption_index(ip_info["country"])
-    # TODO:
 
     return db_entry
 

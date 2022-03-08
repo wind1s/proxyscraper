@@ -5,9 +5,12 @@
 
 Provides utility function for database and ip address.
 """
+from typing import IO, Union
+from io import TextIOBase
 from math import comb
 from typing import Dict, Any, Iterable
 from ipaddress import ip_address, IPv4Address, IPv6Address
+from json import load, loads, JSONDecodeError
 
 
 def is_ipv4(string: str) -> bool:
@@ -32,6 +35,21 @@ def is_ipv6(string: str) -> bool:
         return False
 
     return isinstance(result, IPv6Address)
+
+
+def load_json(stream) -> Union[dict, Exception]:
+    try:
+        if isinstance(stream, TextIOBase):
+            json_data = load(stream)
+        elif isinstance(stream, str):
+            json_data = loads(stream)
+        else:
+            raise TypeError(f"Unknown type to load json from: {stream}")
+
+    except (JSONDecodeError, TypeError) as err:
+        return err
+
+    return json_data
 
 
 def extract_keys(dct: Dict[Any, Any], keys: Iterable[Any]) -> Dict[Any, Any]:

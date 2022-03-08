@@ -6,11 +6,10 @@
 Defines curl get wrappers.
 """
 from typing import Optional
-from json import loads
-from json.decoder import JSONDecodeError
 from io import BytesIO
 from pycurl import Curl, CAINFO, SSL_VERIFYPEER, USERAGENT, URL, WRITEDATA, HTTPHEADER
 from certifi import where
+from utility import load_json
 
 
 def curl_get(url, options) -> str:
@@ -53,10 +52,8 @@ def curl_get_json(url) -> Optional[dict]:
     options = {HTTPHEADER: ["Accept: application/json"]}
     data = curl_get(url, options)
 
-    try:
-        json_data = loads(data)
-
-    except (JSONDecodeError, TypeError):
+    json_data = load_json(data)
+    if json_data is str:
         return None
 
     return json_data

@@ -1,0 +1,12 @@
+{
+  "default_logger_name": "proxyscraper",
+  "default_outfile_name": "proxyscraper.json",
+  "ip_db_name": "ip.db",
+  "ip_db_expire_time": {
+    "days": 7
+  },
+  "proxy_db_name": "proxy.db",
+  "proxy_db_expire_time": {
+    "hours": 2
+  }
+}

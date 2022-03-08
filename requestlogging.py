@@ -8,11 +8,11 @@ from logging import basicConfig, getLogger, Logger
 from aiohttp import ClientSession, ClientError, http_exceptions
 from asynchttprequest import AsyncRequest
 from utility import str_join
-from config import DEFAULT_LOG_FILE
+from config import DEFAULT_LOGGER
 
 
 def get_default_logger() -> Logger:
-    return getLogger(DEFAULT_LOG_FILE)
+    return getLogger(DEFAULT_LOGGER)
 
 
 def init_logger(level: int, stream: IO) -> None:
@@ -33,7 +33,7 @@ async def log_request(request: AsyncRequest, session: ClientSession) -> Union[st
     Logging wrapper around AsyncRequest.send method.
     """
     log = get_default_logger()
-    base_url = session._base_url
+    base_url = session._base_url  # pylint: disable=protected-access
     request_full_url = request.url if base_url is None else str_join(str(base_url), request.url)
 
     try:
@@ -51,7 +51,7 @@ async def log_request(request: AsyncRequest, session: ClientSession) -> Union[st
         )
         return None
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.exception("Non-aiohttp exception occured: %s", getattr(e, "__dict__", {}))
         return None
 

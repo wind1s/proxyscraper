@@ -54,6 +54,11 @@ def init_args(raw_args):
             "action": "store_true",
             "help": "Only update the cache and do not output a file with proxies.",
         },
+        ("--ip-update",): {
+            "dest": "ip_update",
+            "action": "store_true",
+            "help": "Update the ip address info cache",
+        },
         ("--batch-size",): {
             "dest": "batch_size",
             "type": integer_in_range(1, 10000),
@@ -104,11 +109,10 @@ def init_args(raw_args):
     for arg, settings in argument_definitions.items():
         parser.add_argument(*arg, **settings)
 
-    print(raw_args)
     return parser.parse_args(raw_args)
 
 
-def init_verbosity(verbose_count: int) -> int:
+def get_verbosity(verbose_count: int) -> int:
     if verbose_count in (None, 0):
         return WARNING
 
@@ -121,14 +125,24 @@ def init_verbosity(verbose_count: int) -> int:
 def main(args):
     # Switch to INFO to remove debug messages.
 
-    init_logger(init_verbosity(args.verbose), stderr)
-    expire_time = PROXY_DB_EXPIRE_TIME
+    init_logger(get_verbosity(args.verbose), stderr)
+    proxy_db_expire_time = PROXY_DB_EXPIRE_TIME
+    ip_db_expire_time = IP_DB_EXPIRE_TIME
 
     if args.update:
-        expire_time = timedelta(0)
+        proxy_db_expire_time = timedelta(0)
+
+    if args.ip_update:
+        ip_db_expire_time = timedelta(0)
 
     with Database(IP_DB_PATH) as ip_database, Database(PROXY_DB_PATH) as proxy_database:
-        proxy_scraper(proxy_database, ip_database, expire_time, IP_DB_EXPIRE_TIME, args.batch_size)
+        proxy_scraper(
+            proxy_database, ip_database, proxy_db_expire_time, ip_db_expire_time, args.batch_size
+        )
+
+        entries = proxy_database.get_entries()
+        for entry in entries:
+            print(proxy_database.get(entry))
 
 
 main(init_args(argv[1:]))
