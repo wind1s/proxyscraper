@@ -50,11 +50,11 @@ from config import IP_DB_NAME, PROXY_DB_NAME
 
 
 PROXYLIST_RESPONSE_KEYS = (
-    "port",
     "anonymityLevel",
     "protocols",
     "google",
     "org",
+    "speed",
     "latency",
     "responseTime",
     "upTime",
@@ -76,6 +76,7 @@ def forge_proxy_entry(ip_info: dict[str, str], proxylist: dict[str, str]) -> dic
             try_get_key("org", ip_info),
             try_get_key("asn", proxylist),
             try_get_key("org", proxylist),
+            try_get_key("isp", proxylist),
         )
         if origin is not None
     )
@@ -98,11 +99,12 @@ def create_proxy_data_parser(
         """
         ip_address = proxy_data["ip"]
         await parse_ip_info(session, ip_address)
+        ip_and_port = f"{ip_address}:{proxy_data['port']}"
 
-        if proxy_db.key_expired(ip_address, proxy_expire_time):
+        if proxy_db.key_expired(ip_and_port, proxy_expire_time):
             ip_info = ip_db.get(ip_address)
             db_entry = forge_proxy_entry(ip_info, proxy_data)
-            proxy_db.store_entry(ip_address, db_entry)
+            proxy_db.store_entry(ip_and_port, db_entry)
 
     return parse_proxy_data
 

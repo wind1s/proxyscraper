@@ -7,6 +7,7 @@
 from typing import Any
 from argparse import ArgumentParser
 from sys import argv, stderr
+from json import dump
 from datetime import timedelta
 from logging import DEBUG, INFO, WARNING
 from scraper import proxy_scraper
@@ -62,18 +63,13 @@ def init_args(raw_args):
         ("--batch-size",): {
             "dest": "batch_size",
             "type": integer_in_range(1, 10000),
-            "default": 200,
+            "default": 500,
             "help": "Max number of requests to run asynchronous (default 100, more than 1000 is not recommended).",
         },
         ("--google",): {
             "dest": "google",
             "action": "store_true",
             "help": "Filter after google accepted proxies.",
-        },
-        ("--fail",): {
-            "dest": "fail_rate",
-            "type": integer_in_range(0, 100),
-            "help": "Filter after maximum fail rate (%%) of proxy connection tries.",
         },
         # All anonymity levels above the specifed is also accepted.
         ("--anon",): {
@@ -82,16 +78,16 @@ def init_args(raw_args):
             "default": "anonymous",
             "help": "Specify a minimum proxy anonymity level (default anonymous)",
         },
-        # Some have none as response time, include them in the result but put them at the bottom.
-        ("--response-time",): {
-            "dest": "resp_time",
+        ("--speed",): {
+            "dest": "speed",
             "type": integer_in_range(1, 1000),
+            "default": 1000,
             "help": "Specify maximal response time (ms) of proxy server ",
         },
         # Can specify multiple protocols.
-        ("--protocol",): {
-            "dest": "protocol",
-            "nargs": "?",
+        ("--protocols",): {
+            "dest": "protocols",
+            "nargs": "*",
             "choices": ("http", "https", "socks4", "socks5"),
             "default": None,
             "action": "extend",
@@ -129,20 +125,60 @@ def main(args):
     proxy_db_expire_time = PROXY_DB_EXPIRE_TIME
     ip_db_expire_time = IP_DB_EXPIRE_TIME
 
-    if args.update:
-        proxy_db_expire_time = timedelta(0)
-
-    if args.ip_update:
-        ip_db_expire_time = timedelta(0)
-
     with Database(IP_DB_PATH) as ip_database, Database(PROXY_DB_PATH) as proxy_database:
-        proxy_scraper(
-            proxy_database, ip_database, proxy_db_expire_time, ip_db_expire_time, args.batch_size
-        )
+        if args.update or args.only_update:
+            if args.ip_update:
+                ip_db_expire_time = timedelta(0)
 
-        entries = proxy_database.get_entries()
-        for entry in entries:
-            print(proxy_database.get(entry))
+            proxy_db_expire_time = timedelta(0)
+            proxy_scraper(
+                proxy_database,
+                ip_database,
+                proxy_db_expire_time,
+                ip_db_expire_time,
+                args.batch_size,
+            )
+
+        if not args.only_update:
+            with open(args.output, "w", encoding="utf-8") as json_file:
+                entries = proxy_database.get_entries()
+                json_data = {}
+
+                for entry in entries:
+                    proxy_data = proxy_database.get(entry)
+
+                    # If google accepted proxy is specified and the proxy is not google accepted.
+                    if args.google and not proxy_data["google"]:
+                        continue
+
+                    # If the proxy does not have common protocols with the specified ones.
+                    if args.protocols is not None and not set(args.protocols).intersection(
+                        set(proxy_data["protocols"])
+                    ):
+
+                        continue
+
+                    # If the proxy is slower than the specified speed.
+                    if proxy_data["speed"] > args.speed:
+                        continue
+
+                    # If anonymous anonymity was specified and proxy does not have higher or equal.
+                    if (
+                        args.anonymity == "anonymous"
+                        and proxy_data["anonymityLevel"] == "transparent"
+                    ):
+                        continue
+
+                    # If elite anonymity was specified and proxy does not have higher or equal.
+                    if args.anonymity == "elite" and proxy_data["anonymityLevel"] in (
+                        "transparent",
+                        "anonymous",
+                    ):
+                        continue
+
+                    json_data[entry] = proxy_data
+
+                dump(json_data, json_file)
 
 
 main(init_args(argv[1:]))

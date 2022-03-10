@@ -7,10 +7,10 @@ Provides utility function for database and ip address.
 """
 from typing import IO, Union
 from io import TextIOBase
-from math import comb
 from typing import Dict, Any, Iterable
 from ipaddress import ip_address, IPv4Address, IPv6Address
 from json import load, loads, JSONDecodeError
+from scipy.special import comb
 
 
 def is_ipv4(string: str) -> bool:
@@ -74,29 +74,3 @@ def str_join(*strings, sep="") -> str:
     Joins multiple strings with optional separator.
     """
     return sep.join(strings)
-
-
-def confidence(sample_size: int, reliability: float, upper: int) -> float:
-    """
-    Calculates the Cumulative Binomial Distribution, interprets as a confidence value for a sample in a range.
-    sample_size >= upper
-    """
-    score = 0
-    for k in range(0, upper):
-        score += (
-            comb(sample_size, k) * ((1 - reliability) ** k) * (reliability ** (sample_size - k))
-        )
-
-    return score
-
-
-"""
-up_time_try_count = 11
-up_time = 10 / up_time_try_count
-fail = 0.05  # Maximum allowed failed upTime count
-# Reliability in percent, up time percentage.
-R = 
-N =   # sample size
-
-print(float(confidence(up_time_try_count, up_time, int(up_time_try_count * fail))))
-"""

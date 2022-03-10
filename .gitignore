@@ -3,8 +3,9 @@
 
 ### Extra ###
 ip.db
-proxies.db
-ip_addresses.txt
+proxy.db
+proxyscraper.json
+.gitignore
 
 ### Linux ###
 *~
